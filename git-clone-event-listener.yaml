@@ -1,0 +1,18 @@
+# The purpose of an event listening functions very similarly to a backend application as the purpose of an EL is to hold off performing tasks, pipelines, etc until something triggers it [Usually a webhook]
+# We have created a secure ingress using a TLS to allow the creation of a https url to be utilised via github actions
+# I.e. Github will send a post request to https://william-git-pipeline.tekton-will.dev.clusters.easlab.co.uk/ along with a body and header which trigger-bindings will then be utilised to process and initalize any required data from the body/header for future tasks
+# In this example then this event listener will only activate on pull or push requests
+
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: william-tekton-clone-git-event-listener
+  namespace: tekton-will
+spec:
+  serviceAccountName: william-tekton-clone-git-robot
+  triggers:
+    - name: william-tekton-clone-git-trigger 
+      bindings:
+      - ref: william-tekton-clone-git-binding 
+      template:
+        ref: william-tekton-clone-git-template

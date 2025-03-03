@@ -1,0 +1,79 @@
+# A Tekton Pipeline Basically Consists Of A Series Of Asyncronous Tasks. In This Pipeline Will Only Run When The Event Listener Has Been Triggered [When A Github Repo With A Webhook To william-git-pipeline.tekton-will.dev.clusters.easlab.co.uk Is Called With Either A Push Or Pull Request]
+
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: william-tekton-clone-git-read
+  namespace: tekton-will
+spec:
+  description: |
+    Pipeline to clone github repository, install helm chart and push to dockerhub, and deploy onto rancher
+  params:
+    - name: git-username # Accepting the Git username value, which is dynamically generated from trigger bindings [Body] and defined in trigger templates
+      type: string
+    - name: git-action-type # Accepting the Git action [issues, pull request, etc] value, which is dynamically generated from trigger bindings [Header] and defined in trigger templates
+      type: string
+    - name: git-repo-name # Accepting the Git repo name, which is dynamically generated from trigger bindings [Body] and defined in trigger templates
+      type: string
+    - name: url # Accepting the Git url value, which is dynamically generated from trigger bindings [Body] and defined in trigger templates
+      type: string
+  workspaces:
+    - name: shared-data # Workspace used to store cloned repository files and Helm charts and dockerfiles for sharing between tasks
+      description: |
+        This workspace will contain the cloned repo files and Helm charts
+    - name: git-credentials # Workspace used to store credential based sectets for github and dockerhub  for sharing between tasks
+      description: My Github Creds
+  tasks:
+    - name: get-git-details
+      taskRef:
+        name: william-tekton-clone-git-details
+      params:
+        - name: git-username # Passing git username from pipeline params to task
+          value: $(params.git-username)
+        - name: git-action-type # Passing git action type from pipeline params to task
+          value: $(params.git-action-type)
+        - name: git-repo-name # Passing git repo name from pipeline params to task
+          value: $(params.git-repo-name)
+        - name: url # Passing git url from pipeline params to task
+          value: $(params.url)
+    - name: git-clone-repo
+      taskRef:
+        name: git-clone # taskRef identifies the reference to a task definition, in this example then kaniko cannot be found in this repository as the task itself was pre-applied to out k8s cluster from tekton hub [https://raw.githubusercontent.com/tektoncd/catalog/main/task/git-clone/0.6/git-clone.yaml]. Tekton Hub is similar to the github actions marketplace. I.e, this is an example of a pre-created task to clone github repositories created by an open source community
+      workspaces:
+        - name: output
+          workspace: shared-data # Passing workspace [repo files] from pipeline workspaces to task
+        - name: basic-auth
+          workspace: git-credentials # Passing [secret files containing git and docker configs/auths]from pipeline workspaces to task
+      params:
+        - name: url
+          value: $(params.url) # Passing git-repo-url from pipeline params to task [This will be used to dynamically clone repos from any url [specified in the returned github webhook]]
+    - name: get-image-ref
+      runAfter: ["git-clone-repo"] # Usually, a tekton pipeline is asynchronous [Meaning that each task specified inside a tekton pipeline can run at the same time]. However, there are some instances, be it due to functionality purposes or security purposes where this should not be the case [I.e. You would not want to deploy an application to rancher if the docker image has vulnerabilities]. Therefore, we use the runsAfter command to ensure that such tasks only run after a specific task [and/or numerous specific tasks] have completed and passed. In this example, since we cannot process and utilise the image.txt file without the github repo being cloned then this task can only fun after git-clone-repo passes
+      taskRef:
+        name: william-tekton-clone-get-image-ref # taskRef identifies the reference to a task definition, in this example this will run the helm-install task from [git-clone-readme.yaml]
+      workspaces:
+        - name: source
+          workspace: shared-data # Passing workspace [repo files] from pipeline workspaces to task
+    - name: build-push
+      runAfter: ["git-clone-repo", "get-image-ref"] # Usually, a tekton pipeline is asynchronous [Meaning that each task specified inside a tekton pipeline can run at the same time]. However, there are some instances, be it due to functionality purposes or security purposes where this should not be the case [I.e. You would not want to deploy an application to rancher if the docker image has vulnerabilities]. Therefore, we use the runsAfter command to ensure that such tasks only run after a specific task [and/or numerous specific tasks] have completed and passed. In this example, since we cannot build a docker image without a docker file, project reliant files and the image tags [generated from image.txt] then this task will only run after git-clone-repo and get-image-ref
+      taskRef:
+        name: kaniko # taskRef identifies the reference to a task definition, in this example then kaniko cannot be found in this repository as the task itself was pre-applied to out k8s cluster from tekton hub [https://api.hub.tekton.dev/v1/resource/tekton/task/kaniko/0.6/raw]. Tekton Hub is similar to the github actions marketplace. I.e, this is an example of a pre-created task to build and push docker images created by an open source community
+      workspaces:
+        - name: source
+          workspace: shared-data # Passing workspace [repo files] from pipeline workspaces to task
+        - name: dockerconfig
+          workspace: git-credentials # Passing [secret files containing git and docker configs/auths]from pipeline workspaces to task
+      params:
+        - name: IMAGE
+          value: $(tasks.get-image-ref.results.image-reference) # Passing the output result value [docker image tags] from the result of get-image ref: Results: The purpose of results is to define and utilise an output value/result from a particular task. The main benefit of this is that such values do not need to be pre-defined in a taskrun, pipelinerun, trigger template [Improving my own readability of the codebase]. The purpose of this output is to save the inital value found in image.text so it can be utilised for other tasks in the pipline via the utilisation of [tasks.get-image-ref.results.image-reference]
+    - name: install-helm-chart
+      runAfter: ["build-push"] # Usually, a tekton pipeline is asynchronous [Meaning that each task specified inside a tekton pipeline can run at the same time]. However, there are some instances, be it due to functionality purposes or security purposes where this should not be the case [I.e. You would not want to deploy an application to rancher if the docker image has vulnerabilities]. Therefore, we use the runsAfter command to ensure that such tasks only run after a specific task [and/or numerous specific tasks] have completed and passed. In this example, since wee shouldn't deploy anything to rancher until the image has been updated on docker hub then this prevents this task from running until build-push finishes and succeeds
+      taskRef:
+        name: helm-install # taskRef identifies the reference to a task definition, in this example this will run the helm-install task from [git-clone-helm.yaml]
+      params:
+        - name: appName
+          value: $(params.git-repo-name) # Passing git-repo-name from pipeline params to task [This will be used for our helm application name / dynamically generated to the repository name]
+      workspaces:
+        - name: source
+          workspace: shared-data # Passing workspace [repo files] from pipeline workspaces to task
+

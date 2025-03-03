@@ -1,0 +1,36 @@
+# Trigger templates, similar to taskruns or pipelineruns are designed to blueprint the resources we want to initalise/execute as soon as the event listener detects an event
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: william-tekton-clone-git-template
+  namespace: tekton-will
+spec:
+  params:
+    - name: git-username # Initalise the value git-username [Designed to store the github username returned from trigger bindings]
+    - name: git-action-type # Initalise the value git-action-type [Designed to store the github username returned from trigger bindings]
+    - name: git-repo-name # Initalise the value git-repo-name [Designed to store the github username returned from trigger bindings]
+    - name: url # Initalise the value git-url [Designed to store the github username returned from trigger bindings]
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun # Will initalise a pipeline run named william-tekton-clone-git-read-run- as soon as the event listener is triggered
+      metadata:
+        generateName: william-tekton-clone-git-read-run-
+      spec: 
+        pipelineRef:
+          name: william-tekton-clone-git-read # pipelineRef identifies the reference to a pipeline definition, in this example this will run the william-tekton-clone-git-read pipeline as soon as the event listener is triggered
+        params:
+          - name: git-username
+            value: $(tt.params.git-username) # Passing and injecting the git username to be utilised in the pipeline [william-tekton-clone-git-read] / These values have been pre-defined via the trigger bindings
+          - name: git-action-type
+            value: $(tt.params.git-action-type) # Passing and injecting the git action type to be utilised in the pipeline [william-tekton-clone-git-read] / These values have been pre-defined via the trigger bindings
+          - name: git-repo-name
+            value: $(tt.params.git-repo-name) # Passing and injecting the git repo name to be utilised in the pipeline [william-tekton-clone-git-read] / These values have been pre-defined via the trigger bindings
+          - name: url
+            value: $(tt.params.url) # Passing and injecting the git repo name to be utilised in the pipeline [william-tekton-clone-git-read] / These values have been pre-defined via the trigger bindings
+        workspaces:
+          - name: shared-data
+            persistentVolumeClaim:
+              claimName: william-tekton-clone-persistent-volume-claims
+          - name: git-credentials # Assigning the workspace value of git-credentials with a k8s secrets file containing git and docker auth and config files
+            secret:
+              secretName: william-tekton-clone-secrets
