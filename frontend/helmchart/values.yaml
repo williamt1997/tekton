@@ -1,0 +1,13 @@
+appName: homers-website
+namespace: homers-website-namespace
+
+deploymentName: homers-website-deployment
+
+serviceName: homers-frontend-service
+portNumber: 80
+
+configMapName: homers-frontend-configmap
+
+ingressName: homers-frontend-ingress
+ingressHostName: homers-website.dev.clusters.easlab.co.uk
+autoIngressSecretName: homers-frontend-tls

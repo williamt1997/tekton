@@ -1,0 +1,35 @@
+# A Tekton Task Specifies A Singular Line Of Work That Will Be Executed Inside The Tekton Pipeline [Similar To Jobs In Github Actions]
+# A Tekton Task Is Corolated Via One To Many Numerous Steps, Steps are Seqentiual And Are Designed To Run Different Scripts.
+# An Example Of A More Complex Task Will Be A Build And Push To Docker Hub Which The First Command Will Be Designed To Build The Docker Image From The Dockerfile specified in the workspace shared-data to get the path of the stored repo. And Another Command To Push the newly generated image to Docker Hub
+
+# The purpose of the task is to read the contents of image.txt from the directories stored from the git-clone task. If the file exists then store the data in results [image-reference] else, throw exit 1 [Fails The Task / Pipeline]
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: william-tekton-clone-get-image-ref
+  namespace: tekton-will
+spec:
+  description: |
+    Read Image Reference From Cloned Repository
+  workspaces:
+    - name: source # Defines the workpsace source [Path to stored repo]
+  results:
+    - name: image-reference # Results: The purpose of results is to define and utilise an output value/result from a particular task. The main benefit of this is that such values do not need to be pre-defined in a taskrun, pipelinerun, trigger template [Improving my own readability of the codebase]. The purpose of this output is to save the inital value found in image.text so it can be utilised for other tasks in the pipline via the utilisation of [tasks.get-image-ref.results.image-reference]
+      description: |
+        The image reference read from image.txt
+  steps:
+    - name: william-tekton-clone-get-image-ref
+      image: alpine:latest # Runs step container, using the ubuntu image
+      script: |
+        #!/usr/bin/env sh
+        FILE_PATH="$(workspaces.source.path)/image.txt"
+        
+        if [ ! -f "$FILE_PATH" ]; then
+          echo "Error: $FILE_PATH not found!" >&2
+          exit 1
+        fi
+
+        IMAGE_REF=$(cat "$FILE_PATH")
+        echo -n "$IMAGE_REF" > $(results.image-reference.path)
+

@@ -1,0 +1,26 @@
+# A Tekton Task Specifies A Singular Line Of Work That Will Be Executed Inside The Tekton Pipeline [Similar To Jobs In Github Actions]
+# A Tekton Task Is Corolated Via One To Many Numerous Steps, Steps are Seqentiual And Are Designed To Run Different Scripts.
+# An Example Of A More Complex Task Will Be A Build And Push To Docker Hub Which The First Command Will Be Designed To Build The Docker Image From The Dockerfile specified in the workspace shared-data to get the path of the stored repo. And Another Command To Push the newly generated image to Docker Hub
+# This task is designed to deploy a helm chart onto rancher [the templates for the helm charts can be located on the frontend<https://github.com/williamt1997/homers-website-frontend>/backend<https://github.com/williamt1997/homers-website-backend> repositories]
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: helm-install
+  namespace: tekton-will
+spec:
+  workspaces:
+    - name: source
+  params:
+    - name: appName
+      type: string
+      description: The name of the application to be set in the Helm chart
+  steps:
+    - name: helm-install
+      image: alpine/helm:latest
+      script: |
+        #!/bin/sh
+        FILE_PATH="$(workspaces.source.path)/helmchart"
+        helm upgrade --install $(params.appName) $FILE_PATH --namespace homers-website-namespace
+
+

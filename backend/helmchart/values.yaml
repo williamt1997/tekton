@@ -1,0 +1,26 @@
+appName: homers-backend
+namespace: homers-website-namespace
+
+apiVersion: v1
+
+deploymentName: homers-backend-deployment
+
+serviceName: homers-backend-service
+portNumber: 443
+serviceProtocol: TCP
+
+configMapName: homers-configmap
+secretName: homers-secret
+
+databaseAppName: homers-database
+databasePvName: homers-persistent-volume
+databasePvcName: homers-persistent-volume-claims
+databaseServiceName: homers-database-service
+databasePort: 5432
+databaseStorage: 10Gi
+databaseAccessMode: ReadWriteOnce
+databaseStorageClassName: manual
+
+ingressName: homers-backend-ingress
+ingressHostName: homers-backend.dev.clusters.easlab.co.uk
+autoIngressSecretName: homers-backend-tls

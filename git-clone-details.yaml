@@ -1,0 +1,26 @@
+# A Tekton Task Specifies A Singular Line Of Work That Will Be Executed Inside The Tekton Pipeline [Similar To Jobs In Github Actions]
+# A Tekton Task Is Corolated Via One To Many Numerous Steps, Steps are Seqentiual And Are Designed To Run Different Scripts.
+# An Example Of A More Complex Task Will Be A Build And Push To Docker Hub Which The First Command Will Be Designed To Build The Docker Image From The Dockerfile specified in the workspace shared-data to get the path of the stored repo. And Another Command To Push the newly generated image to Docker Hub
+# This is a simple example of a step: This task is designed as a simple means to echo out the git details extracted from the github webhook payload
+
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: william-tekton-clone-git-details
+  namespace: tekton-will
+spec:
+  params:
+    - name: git-username # Accepting the Git username value, which is dynamically generated from trigger bindings [Body] and defined in trigger templates
+      type: string
+    - name: git-action-type # Accepting the Git action [issues, pull request, etc] value, which is dynamically generated from trigger bindings [Header] and defined in trigger templates
+      type: string
+    - name: git-repo-name # Accepting the Git repo name, which is dynamically generated from trigger bindings [Body] and defined in trigger templates
+      type: string
+    - name: url # Accepting the Git url value, which is dynamically generated from trigger bindings [Body] and defined in trigger templates
+      type: string
+  steps:
+    - name: william-tekton-clone-git-details
+      image: ubuntu # Runs step container, using the ubuntu image
+      script: |
+        #!/bin/bash
+        echo "$(params.git-username) has created a $(params.git-action-type) for the repository $(params.git-repo-name)\n\nLocated At: $(params.url)!"

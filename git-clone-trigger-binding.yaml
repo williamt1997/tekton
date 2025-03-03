@@ -1,0 +1,166 @@
+# The purpose of trigger binding is to extract meaningful data from the event preload from the event listener and bind those extracted values to named parameters.
+# In This Example We Are Extracting Data From The GitHub Webhook Request Which Has Been Configured To Make A HTTP Request With A Body In Application/JSON Format
+
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: william-tekton-clone-git-binding
+  namespace: tekton-will
+spec: 
+  params:
+    - name: git-username
+      value: $(body.sender.login) # Extracting data from the payload to get username
+    - name: git-action-type
+      value: $(header.X-GitHub-Event) # Extracting data from the HTTP Request Header To Save The Action Type [Pull Request, Issues, Etc]
+    - name: git-repo-name
+      value: $(body.repository.name) # Extracting data from the payload to Save the repository name 
+    - name: url
+      value: $(body.repository.html_url) # Extracting data from the payload to Save the repository URL
+
+
+# {
+#   "ref": "refs/heads/tekon-helm-update",
+#   "before": "52a1ec03edb3baf9cd551d4f39f9e161e88c9b2c",
+#   "after": "0000000000000000000000000000000000000000",
+#   "repository": {
+#     "id": 940543726,
+#     "node_id": "R_kgDOOA-O7g",
+#     "name": "homers-website-frontend",
+#     "full_name": "williamt1997/homers-website-frontend",
+#     "private": true,
+#     "owner": {
+#       "name": "williamt1997",
+#       "email": "william@enterpriseautomation.co.uk",
+#       "login": "williamt1997",
+#       "id": 166391363,
+#       "node_id": "U_kgDOCeruQw",
+#       "avatar_url": "https://avatars.githubusercontent.com/u/166391363?v=4",
+#       "gravatar_id": "",
+#       "url": "https://api.github.com/users/williamt1997",
+#       "html_url": "https://github.com/williamt1997",
+#       "followers_url": "https://api.github.com/users/williamt1997/followers",
+#       "following_url": "https://api.github.com/users/williamt1997/following{/other_user}",
+#       "gists_url": "https://api.github.com/users/williamt1997/gists{/gist_id}",
+#       "starred_url": "https://api.github.com/users/williamt1997/starred{/owner}{/repo}",
+#       "subscriptions_url": "https://api.github.com/users/williamt1997/subscriptions",
+#       "organizations_url": "https://api.github.com/users/williamt1997/orgs",
+#       "repos_url": "https://api.github.com/users/williamt1997/repos",
+#       "events_url": "https://api.github.com/users/williamt1997/events{/privacy}",
+#       "received_events_url": "https://api.github.com/users/williamt1997/received_events",
+#       "type": "User",
+#       "user_view_type": "public",
+#       "site_admin": false
+#     },
+#     "html_url": "https://github.com/williamt1997/homers-website-frontend",
+#     "description": null,
+#     "fork": false,
+#     "url": "https://github.com/williamt1997/homers-website-frontend",
+#     "forks_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/forks",
+#     "keys_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/keys{/key_id}",
+#     "collaborators_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/collaborators{/collaborator}",
+#     "teams_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/teams",
+#     "hooks_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/hooks",
+#     "issue_events_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/issues/events{/number}",
+#     "events_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/events",
+#     "assignees_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/assignees{/user}",
+#     "branches_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/branches{/branch}",
+#     "tags_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/tags",
+#     "blobs_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/git/blobs{/sha}",
+#     "git_tags_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/git/tags{/sha}",
+#     "git_refs_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/git/refs{/sha}",
+#     "trees_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/git/trees{/sha}",
+#     "statuses_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/statuses/{sha}",
+#     "languages_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/languages",
+#     "stargazers_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/stargazers",
+#     "contributors_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/contributors",
+#     "subscribers_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/subscribers",
+#     "subscription_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/subscription",
+#     "commits_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/commits{/sha}",
+#     "git_commits_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/git/commits{/sha}",
+#     "comments_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/comments{/number}",
+#     "issue_comment_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/issues/comments{/number}",
+#     "contents_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/contents/{+path}",
+#     "compare_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/compare/{base}...{head}",
+#     "merges_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/merges",
+#     "archive_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/{archive_format}{/ref}",
+#     "downloads_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/downloads",
+#     "issues_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/issues{/number}",
+#     "pulls_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/pulls{/number}",
+#     "milestones_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/milestones{/number}",
+#     "notifications_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/notifications{?since,all,participating}",
+#     "labels_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/labels{/name}",
+#     "releases_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/releases{/id}",
+#     "deployments_url": "https://api.github.com/repos/williamt1997/homers-website-frontend/deployments",
+#     "created_at": 1740740995,
+#     "updated_at": "2025-03-03T10:10:07Z",
+#     "pushed_at": 1740996609,
+#     "git_url": "git://github.com/williamt1997/homers-website-frontend.git",
+#     "ssh_url": "git@github.com:williamt1997/homers-website-frontend.git",
+#     "clone_url": "https://github.com/williamt1997/homers-website-frontend.git",
+#     "svn_url": "https://github.com/williamt1997/homers-website-frontend",
+#     "homepage": null,
+#     "size": 2561,
+#     "stargazers_count": 0,
+#     "watchers_count": 0,
+#     "language": "HTML",
+#     "has_issues": true,
+#     "has_projects": true,
+#     "has_downloads": true,
+#     "has_wiki": false,
+#     "has_pages": false,
+#     "has_discussions": false,
+#     "forks_count": 0,
+#     "mirror_url": null,
+#     "archived": false,
+#     "disabled": false,
+#     "open_issues_count": 0,
+#     "license": null,
+#     "allow_forking": true,
+#     "is_template": false,
+#     "web_commit_signoff_required": false,
+#     "topics": [
+
+#     ],
+#     "visibility": "private",
+#     "forks": 0,
+#     "open_issues": 0,
+#     "watchers": 0,
+#     "default_branch": "main",
+#     "stargazers": 0,
+#     "master_branch": "main"
+#   },
+#   "pusher": {
+#     "name": "williamt1997",
+#     "email": "william@enterpriseautomation.co.uk"
+#   },
+#   "sender": {
+#     "login": "williamt1997",
+#     "id": 166391363,
+#     "node_id": "U_kgDOCeruQw",
+#     "avatar_url": "https://avatars.githubusercontent.com/u/166391363?v=4",
+#     "gravatar_id": "",
+#     "url": "https://api.github.com/users/williamt1997",
+#     "html_url": "https://github.com/williamt1997",
+#     "followers_url": "https://api.github.com/users/williamt1997/followers",
+#     "following_url": "https://api.github.com/users/williamt1997/following{/other_user}",
+#     "gists_url": "https://api.github.com/users/williamt1997/gists{/gist_id}",
+#     "starred_url": "https://api.github.com/users/williamt1997/starred{/owner}{/repo}",
+#     "subscriptions_url": "https://api.github.com/users/williamt1997/subscriptions",
+#     "organizations_url": "https://api.github.com/users/williamt1997/orgs",
+#     "repos_url": "https://api.github.com/users/williamt1997/repos",
+#     "events_url": "https://api.github.com/users/williamt1997/events{/privacy}",
+#     "received_events_url": "https://api.github.com/users/williamt1997/received_events",
+#     "type": "User",
+#     "user_view_type": "public",
+#     "site_admin": false
+#   },
+#   "created": false,
+#   "deleted": true,
+#   "forced": false,
+#   "base_ref": null,
+#   "compare": "https://github.com/williamt1997/homers-website-frontend/compare/52a1ec03edb3...000000000000",
+#   "commits": [
+
+#   ],
+#   "head_commit": null
+# }
