@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Values.configMapName }}
+  namespace: {{ .Values.namespace }}
+data:
+  config.js: |
+    window.APP_CONFIG = {
+        URL: "https://homers-backend.hyades.clusters.easlab.co.uk"
+    };

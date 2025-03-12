@@ -1,0 +1,53 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: william-tekton-clone-git-event-listener
+  namespace: tekton-will
+spec:
+  serviceAccountName: william-tekton-clone-git-robot
+  triggers:
+    - name: git-push-trigger-backend
+      interceptors:
+        - ref:
+            name: github
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+            - name: eventTypes
+              value: ["push"]
+        - ref:
+            name: cel
+            kind: ClusterInterceptor
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.head_commit.message.matches('^Merge pull request') &&
+                body.repository.name == 'homers-website-backend'
+      bindings:
+        - ref: william-tekton-clone-git-binding
+      template:
+        ref: william-tekton-pipeline-backend-template
+
+    - name: git-push-trigger-frontend
+      interceptors:
+        - ref:
+            name: github
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+            - name: eventTypes
+              value: ["push"]
+        - ref:
+            name: cel
+            kind: ClusterInterceptor
+          params:
+            - name: filter
+              value: >-
+                body.ref == 'refs/heads/main' &&
+                body.head_commit.message.matches('^Merge pull request') &&
+                body.repository.name == 'homers-website-frontend'
+      bindings:
+        - ref: william-tekton-clone-git-binding
+      template:
+        ref: william-tekton-pipeline-frontend-template

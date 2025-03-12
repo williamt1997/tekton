@@ -1,0 +1,13 @@
+appName: homers-website
+namespace: tekton-will
+
+deploymentName: homers-website-deployment
+
+serviceName: homers-frontend-service
+portNumber: 80
+
+configMapName: homers-frontend-configmap
+
+ingressName: homers-frontend-ingress
+ingressHostName: homers-website.hyades.clusters.easlab.co.uk
+autoIngressSecretName: homers-frontend-tls

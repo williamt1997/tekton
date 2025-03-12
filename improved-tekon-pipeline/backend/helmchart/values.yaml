@@ -1,0 +1,37 @@
+appName: homers-backend
+namespace: tekton-will
+
+apiVersion: v1
+
+deploymentName: homers-backend-deployment
+
+serviceName: homers-backend-service
+portNumber: 443
+serviceProtocol: TCP
+
+configMapName: homers-configmap
+secretName: homers-secret
+
+ingressName: homers-backend-ingress
+ingressHostName: homers-backend.hyades.clusters.easlab.co.uk
+autoIngressSecretName: homers-backend-tls
+
+databaseAppName: homers-database
+databasePvName: homers-persistent-volume
+databasePvcName: homers-persistent-volume-claims
+databaseServiceName: homers-database-service
+databasePort: 5432
+databaseStorage: 10Gi
+databaseAccessMode: ReadWriteOnce
+databaseStorageClassName: manual
+
+pgAdminAppName: homers-pgadmin
+pgAdminPort: 80
+pgAdminServiceName: homers-pgadmin-service
+
+pgAdminIngressName: homers-pgadmin-ingress
+pgAdminIngressHostName: homers-pgadmin.hyades.clusters.easlab.co.uk
+pgAdminAutoIngressSecretName: homers-pgadmin-tls
+
+
+

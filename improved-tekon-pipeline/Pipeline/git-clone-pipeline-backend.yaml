@@ -1,0 +1,161 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: william-tekton-pipeline-backend
+  namespace: tekton-will
+spec:
+  description: |
+    Pipeline to clone github repository, install helm chart and push to dockerhub
+  params:
+    - name: git-username
+      type: string
+    - name: git-action-type
+      type: string
+    - name: git-repo-name
+      type: string
+    - name: url
+      type: string
+    - name: full-repo-name
+      type: string
+    - name: repo-sha
+      type: string
+    - name: sonar-token-key
+      type: string
+    - name: tekton-dashboard-url
+      type: string
+  workspaces:
+    - name: shared-data
+      description: |
+        This workspace will contain the cloned repo files and Helm charts
+    - name: git-credentials
+      description: My Github Creds
+  tasks:
+    - name: set-github-status-pending
+      taskRef:
+        name: github-set-status
+      params:
+        - name: SHA
+          value: $(params.repo-sha)
+        - name: REPO_FULL_NAME
+          value: $(params.full-repo-name)
+        - name: AUTH_TYPE
+          value: Bearer
+        - name: GITHUB_TOKEN_SECRET_NAME
+          value: william-tekton-clone-secrets
+        - name: GITHUB_TOKEN_SECRET_KEY
+          value: git-auth
+        - name: STATE
+          value: pending
+        - name: TARGET_URL
+          value: $(params.tekton-dashboard-url)
+        - name: DESCRIPTION
+          value: Deployment Has Started
+    - name: get-git-details
+      runAfter: ["set-github-status-pending"]
+      taskRef:
+        name: william-tekton-clone-git-details
+      params:
+        - name: git-username
+          value: $(params.git-username)
+        - name: git-action-type
+          value: $(params.git-action-type)
+        - name: git-repo-name
+          value: $(params.git-repo-name)
+        - name: url
+          value: $(params.url)
+    - name: git-clone-repo
+      runAfter: ["set-github-status-pending"]
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: shared-data
+        - name: basic-auth
+          workspace: git-credentials
+      params:
+        - name: url
+          value: $(params.url)
+    - name: go-scan
+      runAfter: ["git-clone-repo"]
+      taskRef:
+        name: golang-test
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: package
+          value: $(params.git-repo-name)
+    - name: sonarqube-scanner
+      runAfter: ["git-clone-repo"]
+      taskRef:
+        name: sonar-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: repo-name
+          value: $(params.git-repo-name)
+        - name: sonar-token-key
+          value: $(params.sonar-token-key)
+    - name: get-image-ref
+      runAfter: ["git-clone-repo"]
+      taskRef:
+        name: william-tekton-clone-get-image-ref
+      workspaces:
+        - name: source
+          workspace: shared-data
+    - name: build-scan
+      runAfter: ["get-image-ref"]
+      taskRef:
+        name: build-and-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: IMAGE
+          value: $(tasks.get-image-ref.results.image-reference)
+    - name: push-image
+      runAfter: ["build-scan", "go-scan", "sonarqube-scanner"]
+      taskRef:
+        name: push-to-docker-hub
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: dockerconfig
+          workspace: git-credentials
+      params:
+        - name: IMAGE
+          value: $(tasks.get-image-ref.results.image-reference)
+    - name: install-helm-chart
+      runAfter: ["push-image"]
+      taskRef:
+        name: helm-install
+      params:
+        - name: appName
+          value: $(params.git-repo-name)
+      workspaces:
+        - name: source
+          workspace: shared-data
+  finally:
+    - name: finaltask
+      taskRef:
+        name: github-set-status
+      params:
+        - name: SHA
+          value: $(params.repo-sha)
+        - name: REPO_FULL_NAME
+          value: $(params.full-repo-name)
+        - name: AUTH_TYPE
+          value: Bearer
+        - name: GITHUB_TOKEN_SECRET_NAME
+          value: william-tekton-clone-secrets
+        - name: GITHUB_TOKEN_SECRET_KEY
+          value: git-auth
+        - name: STATE
+          value: "$(tasks.status)"
+        - name: TARGET_URL
+          value: $(params.tekton-dashboard-url)
+        - name: DESCRIPTION
+          value: "This Pipeline Has Finished With A: $(tasks.status) Status"
+
+

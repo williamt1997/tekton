@@ -1,0 +1,52 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: william-tekton-pipeline-backend-template
+  namespace: tekton-will
+spec:
+  params:
+    - name: git-username
+    - name: git-action-type
+    - name: git-repo-name
+    - name: url
+    - name: full-repo-name
+    - name: repo-sha
+    - name: sonar-token-key
+    - name: tekton-dashboard-url
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: william-tekton-pipeline-backend-run-
+      spec: 
+        pipelineRef:
+          name: william-tekton-pipeline-backend
+        params:
+          - name: git-username
+            value: $(tt.params.git-username)
+          - name: git-action-type
+            value: $(tt.params.git-action-type)
+          - name: git-repo-name
+            value: $(tt.params.git-repo-name)
+          - name: url
+            value: $(tt.params.url)
+          - name: full-repo-name
+            value: $(tt.params.full-repo-name)
+          - name: repo-sha
+            value: $(tt.params.repo-sha)
+          - name: sonar-token-key
+            value: sonar-token-backend
+          - name: tekton-dashboard-url
+            value: https://tekton.hyades.clusters.easlab.co.uk/#/namespaces/tekton-will/pipelineruns
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - ReadWriteOnce
+                resources:
+                  requests:
+                    storage: 5Gi
+          - name: git-credentials
+            secret:
+              secretName: william-tekton-clone-secrets

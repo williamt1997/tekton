@@ -1,0 +1,30 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sonar-scan
+  namespace: tekton-will
+spec:
+  params:
+    - name: repo-name
+    - name: sonar-token-key
+  workspaces:
+    - name: source
+      mountPath: /usr/src
+  steps:
+    - name: sonar-scanner
+      image: sonarsource/sonar-scanner-cli:latest
+      args:
+        - "sonar-scanner"
+        - "-Dsonar.projectKey=$(params.repo-name)"
+        - "-Dsonar.sources=$(workspaces.source.path)"
+        - "-Dsonar.host.url=http://sonarqube-tekton-will.hyades.clusters.easlab.co.uk"
+        - "-Dsonar.inclusions=**/*"
+      env:
+        - name: SONAR_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: william-tekton-clone-secrets
+              key: $(params.sonar-token-key)
+      
+
+

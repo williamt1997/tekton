@@ -1,0 +1,105 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: william-tekton-pipeline-frontend
+  namespace: tekton-will
+spec:
+  description: |
+    Pipeline to clone github repository, install helm chart and push to dockerhub
+  params:
+    - name: git-username
+      type: string
+    - name: git-action-type
+      type: string
+    - name: git-repo-name
+      type: string
+    - name: url
+      type: string
+    - name: full-repo-name
+      type: string
+    - name: repo-sha
+      type: string
+    - name: sonar-token-key
+      type: string
+  workspaces:
+    - name: shared-data
+      description: |
+        This workspace will contain the cloned repo files and Helm charts
+    - name: git-credentials
+      description: My Github Creds
+  tasks:
+    - name: get-git-details
+      taskRef:
+        name: william-tekton-clone-git-details
+      params:
+        - name: git-username
+          value: $(params.git-username)
+        - name: git-action-type
+          value: $(params.git-action-type)
+        - name: git-repo-name
+          value: $(params.git-repo-name)
+        - name: url
+          value: $(params.url)
+    - name: git-clone-repo
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: shared-data
+        - name: basic-auth
+          workspace: git-credentials
+      params:
+        - name: url
+          value: $(params.url)
+    - name: sonarqube-scanner
+      runAfter: ["git-clone-repo"]
+      taskRef:
+        name: sonar-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: repo-name
+          value: $(params.git-repo-name)
+        - name: sonar-token-key
+          value: $(params.sonar-token-key)
+    - name: get-image-ref
+      runAfter: ["git-clone-repo"]
+      taskRef:
+        name: william-tekton-clone-get-image-ref
+      workspaces:
+        - name: source
+          workspace: shared-data
+    - name: build-scan
+      runAfter: ["get-image-ref"]
+      taskRef:
+        name: build-and-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: IMAGE
+          value: $(tasks.get-image-ref.results.image-reference)
+    - name: push-image
+      runAfter: ["build-scan", "sonarqube-scanner"]
+      taskRef:
+        name: push-to-docker-hub
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: dockerconfig
+          workspace: git-credentials
+      params:
+        - name: IMAGE
+          value: $(tasks.get-image-ref.results.image-reference)
+    - name: install-helm-chart
+      runAfter: ["push-image"]
+      taskRef:
+        name: helm-install
+      params:
+        - name: appName
+          value: $(params.git-repo-name)
+      workspaces:
+        - name: source
+          workspace: shared-data
+

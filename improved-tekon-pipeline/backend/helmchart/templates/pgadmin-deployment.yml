@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.pgAdminAppName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.pgAdminAppName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.pgAdminAppName }}
+    spec:
+      containers:
+        - name: pgadmin
+          image: dpage/pgadmin4:latest
+          ports:
+            - containerPort: {{ .Values.pgAdminPort }}
+          env:
+          - name: PGADMIN_DEFAULT_EMAIL
+            value: homer@simpson.com
+          - name: PGADMIN_DEFAULT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: {{ .Values.secretName }}
+                key: pgadmin-password
+
+---
+
+apiVersion: {{ .Values.apiVersion }}
+kind: Service
+metadata:
+  name: {{ .Values.pgAdminServiceName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  type: NodePort
+  selector:
+    app: {{ .Values.pgAdminAppName }}
+  ports:
+    - protocol: {{ .Values.serviceProtocol }}
+      port: {{ .Values.pgAdminPort }}
+      targetPort: {{ .Values.pgAdminPort }}
+      nodePort: 30213
+
+
+

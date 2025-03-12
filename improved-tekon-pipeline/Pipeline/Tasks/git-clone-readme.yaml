@@ -1,0 +1,29 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: william-tekton-clone-get-image-ref
+  namespace: tekton-will
+spec:
+  description: |
+    Read Image Reference From Cloned Repository
+  workspaces:
+    - name: source
+  results:
+    - name: image-reference
+      description: |
+        The image reference read from image.txt
+  steps:
+    - name: william-tekton-clone-get-image-ref
+      image: alpine:latest
+      script: |
+        #!/usr/bin/env sh
+        FILE_PATH="$(workspaces.source.path)/image.txt"
+        
+        if [ ! -f "$FILE_PATH" ]; then
+          echo "Error: $FILE_PATH not found!" >&2
+          exit 1
+        fi
+
+        IMAGE_REF=$(cat "$FILE_PATH")
+        echo -n "$IMAGE_REF" > $(results.image-reference.path)
+
