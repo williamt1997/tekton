@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.databaseAppName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.databaseAppName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.databaseAppName }}
+    spec:
+      terminationGracePeriodSeconds: 30
+      containers:
+        - name: postgres
+          image: postgres:15
+          ports:
+            - containerPort: {{ .Values.databasePort }}
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: postgres-user
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.secretName }}
+                  key: postgres-password
+            - name: POSTGRES_DB
+              valueFrom:
+                configMapKeyRef:
+                  name: {{ .Values.configMapName }}
+                  key: database-name
+          volumeMounts:
+            - name: homers-postgres-storage
+              mountPath: "/var/lib/postgresql/data"
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "500m"
+            limits:
+              memory: "1Gi"
+              cpu: "1000m"
+      volumes:
+        - name: homers-postgres-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.databasePvcName }}
+
+---
+apiVersion: {{ .Values.apiVersion }}
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.databasePvName }}
+  labels:
+    type: local
+    app: {{ .Values.databaseAppName }}
+spec:
+  capacity:
+    storage: {{ .Values.databaseStorage }}
+  accessModes:
+    - {{ .Values.databaseAccessMode }}
+  storageClassName: {{ .Values.databaseStorageClassName }}
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: "/mnt/data"
+
+---
+apiVersion: {{ .Values.apiVersion }}
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.databasePvcName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  accessModes:
+    - {{ .Values.databaseAccessMode }}
+  resources:
+    requests:
+      storage: {{ .Values.databaseStorage }}
+  storageClassName: {{ .Values.databaseStorageClassName }}
+
+---
+apiVersion: {{ .Values.apiVersion }}
+kind: Service
+metadata:
+  name: {{ .Values.databaseServiceName }}
+  namespace: {{ .Values.namespace }}
+spec:
+  selector:
+    app: {{ .Values.databaseAppName }}
+  ports:
+    - protocol: {{ .Values.serviceProtocol }}
+      port: {{ .Values.databasePort }}
+      targetPort: {{ .Values.databasePort }}

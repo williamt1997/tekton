@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: william-tekton-clone-git-details
+  namespace: tekton-will
+spec:
+  params:
+    - name: git-username
+      type: string
+    - name: git-action-type
+      type: string
+    - name: git-repo-name
+      type: string
+    - name: url
+      type: string
+  steps:
+    - name: william-tekton-clone-git-details
+      image: ubuntu
+      script: |
+        #!/bin/bash
+        echo "$(params.git-username) has created a $(params.git-action-type) for the repository $(params.git-repo-name)\n\nLocated At: $(params.url)!"

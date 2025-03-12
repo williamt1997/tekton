@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-http01
+  name: william-clone-pipeline-ingress
+  namespace: tekton-will
+spec:
+  rules:
+    - host: william-git-pipeline.tekton-will.hyades.clusters.easlab.co.uk
+      http:
+        paths:
+          - backend:
+              service:
+                name: el-william-tekton-clone-git-event-listener
+                port:
+                  number: 8080
+            path: /
+            pathType: Prefix
+  tls:
+    - hosts:
+        - william-git-pipeline.tekton-will.hyades.clusters.easlab.co.uk
+      secretName: tekton-will-ingress-tls

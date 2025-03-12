@@ -1,0 +1,8 @@
+.air.toml
+tmp
+.gitIgnore
+.github
+readme.md
+sonar-project.properties
+.secrets
+helmchart
