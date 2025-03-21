@@ -1,0 +1,46 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: push-to-docker-hub
+  namespace: {{ .Values.namespace }}
+spec:
+  params:
+    - name: IMAGE
+  workspaces:
+    - name: source
+    - name: dockerconfig
+      optional: true
+      mountPath: /root/.docker
+  results:
+    - name: IMAGE_URL
+      description: URL of the image just built.
+  steps:
+    - name: push-image
+      image: gcr.io/go-containerregistry/crane:latest
+      args:
+        - "push"
+        - "$(workspaces.source.path)/image.tar"
+        - "$(params.IMAGE)"
+      resources:
+        requests:
+          cpu:  {{ .Values.requests.mediumResources.cpu }}
+          memory: {{ .Values.requests.mediumResources.memory }}
+        limits:
+          cpu: {{ .Values.limits.mediumResources.cpu }}
+          memory: {{ .Values.limits.mediumResources.memory }}
+
+      securityContext:
+        runAsUser: 0
+    - name: write-url
+      image: docker.io/library/bash:5.1.4@sha256:c523c636b722339f41b6a431b44588ab2f762c5de5ec3bd7964420ff982fb1d9
+      script: |
+        set -e
+        image="$(params.IMAGE)"
+        echo -n "${image}" | tee "$(results.IMAGE_URL.path)"
+      resources:
+        requests:
+          cpu:  {{ .Values.requests.lowResources.cpu }}
+          memory: {{ .Values.requests.lowResources.memory }}
+        limits:
+          cpu: {{ .Values.limits.lowResources.cpu }}
+          memory: {{ .Values.limits.lowResources.memory }}

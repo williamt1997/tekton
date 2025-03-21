@@ -1,0 +1,21 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerBinding
+metadata:
+  name: william-tekton-clone-git-binding
+  namespace: {{ .Values.namespace }}
+spec: 
+  params:
+    - name: git-username
+      value: $(body.sender.login)
+    - name: git-action-type
+      value: $(header.X-GitHub-Event)
+    - name: git-repo-name
+      value: $(body.repository.name)
+    - name: url
+      value: $(body.repository.html_url)
+    - name: full-repo-name
+      value: $(body.repository.full_name)
+    - name: repo-sha
+      value: $(body.after)
+    - name: language-url
+      value: $(body.repository.languages_url)

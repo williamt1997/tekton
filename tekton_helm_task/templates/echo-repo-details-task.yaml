@@ -1,0 +1,64 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: william-tekton-clone-git-details
+  namespace: {{ .Values.namespace }}
+spec:
+  params:
+    - name: git-username
+      type: string
+    - name: git-action-type
+      type: string
+    - name: git-repo-name
+      type: string
+    - name: url
+      type: string
+    - name: language-url
+      type: string
+    - name: auth-type
+      type: string
+    - name: auth-key
+      type: string
+  results:
+    - name: language-list
+      type: array
+  steps:
+    - name: william-tekton-clone-git-details
+      image: ubuntu
+      resources:
+        requests:
+          cpu:  {{ .Values.requests.lowResources.cpu }}
+          memory: {{ .Values.requests.lowResources.memory }}
+        limits:
+          cpu: {{ .Values.limits.lowResources.cpu}}
+          memory: {{ .Values.limits.lowResources.memory }}
+      script: |
+        #!/bin/bash
+        echo "$(params.git-username) has created a $(params.git-action-type) for the repository $(params.git-repo-name)\n\nLocated At: $(params.url)!"
+    - name: find-repo-languages
+      image: ubuntu:latest
+      script: |
+        #!/bin/bash
+        set -e
+        apt-get update && apt-get install -y curl jq
+        response=$(curl -s -H "Authorization: $(params.auth-type) $GITHUB_TOKEN" \
+        -H "Accept: application/vnd.github.v3+json" \
+        $(params.language-url))
+        languages=$(echo "$response" | jq -r 'keys | .[]')
+        echo "$languages" | jq -R . | jq -s . > $(results.language-list.path)
+      env:
+        - name: GITHUB_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: {{ .Values.secretName }}
+              key: $(params.auth-key)
+      resources:
+        requests:
+          cpu:  {{ .Values.requests.mediumResources.cpu }}
+          memory: {{ .Values.requests.mediumResources.memory }}
+        limits:
+          cpu: {{ .Values.limits.mediumResources.cpu }}
+          memory: {{ .Values.limits.mediumResources.memory }}
+
+
+

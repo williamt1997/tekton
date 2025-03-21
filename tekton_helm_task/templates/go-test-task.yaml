@@ -1,0 +1,81 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: golang-test
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/version: "0.3"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.12.1"
+    tekton.dev/categories: Build Tools
+    tekton.dev/tags: build-tool
+    tekton.dev/displayName: "golang build"
+    tekton.dev/platforms: "linux/amd64,linux/s390x,linux/ppc64le"
+spec:
+  params:
+  - name: package
+  - name: CGO_ENABLED
+    default: ""
+  - name: GOSUMDB
+    default: ""
+  workspaces:
+  - name: source
+  sidecars:
+    - name: postgres-test
+      image: postgres:latest
+      env:
+        - name: POSTGRES_PASSWORD
+          value: test
+        - name: POSTGRES_USER
+          value: test
+        - name: POSTGRES_DB
+          value: test
+      ports:
+        - containerPort: 5432
+          hostPort: 8082
+      args: ["-p", "8082"]
+      resources:
+        requests:
+          cpu: {{ .Values.requests.postgresSidecar.cpu }}
+          memory: {{ .Values.requests.postgresSidecar.memory }}
+        limits:
+          cpu: {{ .Values.limits.postgresSidecar.cpu }}
+          memory: {{ .Values.limits.postgresSidecar.memory }}
+      readinessProbe:
+        exec:
+          command: ["pg_isready", "-U", "test", "-p", "8082"]
+        initialDelaySeconds: 5
+        periodSeconds: 10
+  steps:
+  - name: build
+    image: golang:latest
+    resources:
+        requests:
+          cpu:  {{ .Values.requests.highResources.cpu }}
+          memory: {{ .Values.requests.highResources.memory }}
+        limits:
+          cpu: {{ .Values.limits.highResources.cpu }}
+          memory: {{ .Values.limits.highResources.memory }}
+    workingDir: $(workspaces.source.path)
+    script: |
+      apt-get update && apt-get install -y postgresql-client
+      
+      if [ ! -e $GOPATH/src/$(params.package)/go.mod ];then
+        SRC_PATH="$GOPATH/src/$(params.package)"
+        mkdir -p $SRC_PATH
+        cp -R "$(workspaces.source.path)"/* $SRC_PATH
+        cd $SRC_PATH
+      fi
+
+      echo "Waiting for PostgreSQL to be ready..."
+      until pg_isready -h localhost -U test -p 8082; do sleep 2; done
+      echo "PostgreSQL is ready!"
+      
+      go test ./test
+    env:
+    - name: GOOS
+      value: linux
+    - name: GOARCH
+      value: amd64
+    - name: GO111MODULE
+      value: auto

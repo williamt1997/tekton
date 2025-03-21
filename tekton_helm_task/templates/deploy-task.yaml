@@ -1,0 +1,26 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: helm-install
+  namespace: {{ .Values.namespace }}
+spec:
+  workspaces:
+    - name: source
+  params:
+    - name: appName
+      type: string
+      description: The name of the application to be set in the Helm chart
+  steps:
+    - name: helm-install
+      image: alpine/helm:latest
+      resources:
+        requests:
+          cpu:  {{ .Values.requests.mediumResources.cpu }}
+          memory: {{ .Values.requests.mediumResources.memory }}
+        limits:
+          cpu: {{ .Values.limits.mediumResources.cpu }}
+          memory: {{ .Values.limits.mediumResources.memory }}
+      script: |
+        #!/bin/sh
+        FILE_PATH="$(workspaces.source.path)/helmchart"
+        helm upgrade --install $(params.appName) $FILE_PATH --history-max 1 --namespace {{ .Values.namespace }}
