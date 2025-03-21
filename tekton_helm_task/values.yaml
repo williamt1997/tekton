@@ -1,0 +1,65 @@
+# Scope: App
+
+namespace: homers-website
+
+# Scope: Ingress
+
+certManager: letsencrypt-http01
+ingressHostName: wt-pipeline-ingress.hyades.clusters.easlab.co.uk
+ingressSecretName: tekton-will-ingress-tls
+
+# Scope: Event Listener
+
+eventListenerName: william-tekton-clone-git-event-listener
+serviceAccountName: william-tekton-clone-git-robot
+interceptorRepoName: github
+interceptorRepoParams:
+  - name: eventTypes
+    value: ["push"]
+interceptorCelValue: >-
+  body.ref == 'refs/heads/main' &&
+  body.head_commit.message.matches('^Merge pull request')
+
+# Scope: Trigger Template
+volumeClaimTemplateAccessMode: ReadWriteOnce
+volumeClaimStorage: 5Gi
+dashboardUrl: https://tekton.hyades.clusters.easlab.co.uk/#/namespaces/homers-website/pipelineruns
+secretName: william-tekton-clone-secrets
+
+# Scope: Pipeline
+gitStatusAuthKeyName: git-auth
+gitStatusAuthType: Bearer
+gitStatusPendingDescription: Deployment Has Started
+gitCloneAuthType: basic-auth
+sonarScanHost: http://wt-sonarqube.hyades.clusters.easlab.co.uk
+artifactRepository: homers-nexus-docker-service.homers-website.svc.cluster.local:8085
+
+# Scope: Task
+limits:
+  highResources:
+    cpu: 1000m
+    memory: 1Gi
+  mediumResources:
+    cpu: 500m
+    memory: 512Mi
+  lowResources:
+    cpu: 250m
+    memory: 256Mi
+  postgresSidecar:
+    cpu: 500m
+    memory: 512Mi
+requests:
+  highResources:
+    cpu: 500m
+    memory: 512Mi
+  mediumResources:
+    cpu: 250m
+    memory: 256Mi
+  lowResources:
+    cpu: 100m
+    memory: 128Mi
+  postgresSidecar:
+    cpu: 250m
+    memory: 256Mi
+
+

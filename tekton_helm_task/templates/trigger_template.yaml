@@ -1,0 +1,55 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: TriggerTemplate
+metadata:
+  name: william-tekton-pipeline-template
+  namespace: {{ .Values.namespace }}
+spec:
+  params:
+    - name: git-username
+    - name: git-action-type
+    - name: git-repo-name
+    - name: url
+    - name: full-repo-name
+    - name: repo-sha
+    - name: sonar-token-key
+    - name: tekton-dashboard-url
+    - name: language-url
+  resourcetemplates:
+    - apiVersion: tekton.dev/v1beta1
+      kind: PipelineRun
+      metadata:
+        generateName: william-tekton-$(tt.params.git-repo-name)-pipeline-run-
+      spec: 
+        pipelineRef:
+          name: william-tekton-pipeline
+        params:
+          - name: git-username
+            value: $(tt.params.git-username)
+          - name: git-action-type
+            value: $(tt.params.git-action-type)
+          - name: git-repo-name
+            value: $(tt.params.git-repo-name)
+          - name: url
+            value: $(tt.params.url)
+          - name: full-repo-name
+            value: $(tt.params.full-repo-name)
+          - name: repo-sha
+            value: $(tt.params.repo-sha)
+          - name: sonar-token-key
+            value: sonar-$(tt.params.git-repo-name)
+          - name: tekton-dashboard-url
+            value: {{ .Values.dashboardUrl }}
+          - name: language-url
+            value: $(tt.params.language-url)
+        workspaces:
+          - name: shared-data
+            volumeClaimTemplate:
+              spec:
+                accessModes:
+                  - {{ .Values.volumeClaimTemplateAccessMode }}
+                resources:
+                  requests:
+                    storage: {{ .Values.volumeClaimStorage }}
+          - name: git-credentials
+            secret:
+              secretName: {{ .Values.secretName }}

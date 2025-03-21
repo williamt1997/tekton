@@ -1,0 +1,181 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: william-tekton-pipeline
+  namespace:  {{ .Values.namespace }}
+spec:
+  params:
+    - name: git-username
+      type: string
+    - name: git-action-type
+      type: string
+    - name: git-repo-name
+      type: string
+    - name: url
+      type: string
+    - name: full-repo-name
+      type: string
+    - name: repo-sha
+      type: string
+    - name: sonar-token-key
+      type: string
+    - name: tekton-dashboard-url
+      type: string
+    - name: language-url
+      type: string
+  workspaces:
+    - name: shared-data
+    - name: git-credentials
+  tasks:
+    - name: set-github-status-pending
+      taskRef:
+        name: github-set-status
+      params:
+        - name: SHA
+          value: $(params.repo-sha)
+        - name: REPO_FULL_NAME
+          value: $(params.full-repo-name)
+        - name: AUTH_TYPE
+          value: {{ .Values.gitStatusAuthType }}
+        - name: GITHUB_TOKEN_SECRET_NAME
+          value: {{ .Values.secretName }}
+        - name: GITHUB_TOKEN_SECRET_KEY
+          value: {{ .Values.gitStatusAuthKeyName }}
+        - name: STATE
+          value: pending
+        - name: TARGET_URL
+          value: $(params.tekton-dashboard-url)
+        - name: DESCRIPTION
+          value: {{ .Values.gitStatusPendingDescription }}
+    - name: get-git-details
+      runAfter: ["set-github-status-pending"]
+      taskRef:
+        name: william-tekton-clone-git-details
+      params:
+        - name: git-username
+          value: $(params.git-username)
+        - name: git-action-type
+          value: $(params.git-action-type)
+        - name: git-repo-name
+          value: $(params.git-repo-name)
+        - name: url
+          value: $(params.url)
+        - name: language-url
+          value: $(params.language-url)
+        - name: auth-type
+          value:  {{ .Values.gitStatusAuthType }}
+        - name: auth-key
+          value: {{ .Values.gitStatusAuthKeyName }}
+    - name: git-clone-repo
+      runAfter: ["get-git-details"]
+      taskRef:
+        name: git-clone
+      workspaces:
+        - name: output
+          workspace: shared-data
+        - name: {{ .Values.gitCloneAuthType }}
+          workspace: git-credentials
+      params:
+        - name: url
+          value: $(params.url)
+    - name: go-scan
+      runAfter: ["git-clone-repo"]
+      when:
+        - input: "Go"
+          operator: in
+          values: 
+            - "$(tasks.get-git-details.results.language-list)"
+      taskRef:
+        name: golang-test
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: package
+          value: $(params.git-repo-name)
+    - name: sonarqube-scanner
+      runAfter: ["git-clone-repo"]
+      taskRef:
+        name: sonar-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: repo-name
+          value: $(params.git-repo-name)
+        - name: sonar-token-key
+          value: $(params.sonar-token-key)
+        - name: sonar-host
+          value: {{ .Values.sonarScanHost }}
+    - name: build-scan
+      runAfter: ["git-clone-repo"]
+      when:
+        - input: "Dockerfile"
+          operator: in
+          values: 
+            - "$(tasks.get-git-details.results.language-list)"
+      taskRef:
+        name: build-and-scan
+      workspaces:
+        - name: source
+          workspace: shared-data
+      params:
+        - name: IMAGE
+          value: {{ .Values.artifactRepository }}/$(params.git-username)/$(params.git-repo-name):latest
+        - name: repourl
+          value: $(params.url)
+        - name: username
+          value: $(params.git-username)
+    - name: push-image
+      runAfter: ["build-scan", "go-scan", "sonarqube-scanner"]
+      when:
+        - input: "Dockerfile"
+          operator: in
+          values: 
+            - "$(tasks.get-git-details.results.language-list)"
+      taskRef:
+        name: push-to-docker-hub
+      workspaces:
+        - name: source
+          workspace: shared-data
+        - name: dockerconfig
+          workspace: git-credentials
+      params:
+        - name: IMAGE
+          value: {{ .Values.artifactRepository }}/$(params.git-username)/$(params.git-repo-name):latest
+    - name: install-helm-chart
+      runAfter: ["push-image"]
+      when:
+        - input: "Dockerfile"
+          operator: in
+          values: 
+            - "$(tasks.get-git-details.results.language-list)"
+      taskRef:
+        name: helm-install
+      params:
+        - name: appName
+          value: $(params.git-repo-name)
+      workspaces:
+        - name: source
+          workspace: shared-data
+  finally:
+    - name: finaltask
+      taskRef:
+        name: github-set-status
+      params:
+        - name: SHA
+          value: $(params.repo-sha)
+        - name: REPO_FULL_NAME
+          value: $(params.full-repo-name)
+        - name: AUTH_TYPE
+          value:  {{ .Values.gitStatusAuthType }}
+        - name: GITHUB_TOKEN_SECRET_NAME
+          value:  {{ .Values.secretName }}
+        - name: GITHUB_TOKEN_SECRET_KEY
+          value: {{ .Values.gitStatusAuthKeyName }}
+        - name: STATE
+          value: "$(tasks.status)"
+        - name: TARGET_URL
+          value: $(params.tekton-dashboard-url)
+        - name: DESCRIPTION
+          value: "This Pipeline Has Finished With A: $(tasks.status) Status"

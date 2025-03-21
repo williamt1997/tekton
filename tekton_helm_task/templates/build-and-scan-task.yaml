@@ -1,0 +1,68 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: build-and-scan
+  namespace: {{ .Values.namespace }}
+  labels:
+    app.kubernetes.io/version: "0.6"
+  annotations:
+    tekton.dev/pipelines.minVersion: "0.17.0"
+    tekton.dev/categories: Image Build
+    tekton.dev/tags: image-build
+    tekton.dev/displayName: "Build and save container image locally using Kaniko"
+    tekton.dev/platforms: "linux/amd64,linux/arm64,linux/ppc64le"
+spec:
+  description: >-
+    This Task builds a Dockerfile with Kaniko and saves the image locally as a tarball.
+  params:
+    - name: IMAGE
+      description: Name (reference) of the image to build.
+    - name: DOCKERFILE
+      description: Path to the Dockerfile to build.
+      default: ./Dockerfile
+    - name: CONTEXT
+      description: The build context used by Kaniko.
+      default: ./
+    - name: repourl
+    - name: username
+  workspaces:
+    - name: source
+      description: Holds the context and Dockerfile
+  steps:
+    - name: build-image
+      workingDir: $(workspaces.source.path)
+      image: gcr.io/kaniko-project/executor:latest
+      resources:
+        requests:
+          cpu:  {{ .Values.requests.highResources.cpu}}
+          memory: {{ .Values.requests.highResources.memory}}
+        limits:
+          cpu: {{ .Values.limits.highResources.cpu }}
+          memory: {{ .Values.limits.highResources.memory }}
+      args:
+        - --dockerfile=$(params.DOCKERFILE)
+        - --context=$(workspaces.source.path)/$(params.CONTEXT)
+        - --tar-path=$(workspaces.source.path)/image.tar
+        - --destination=$(params.IMAGE)
+        - --label
+        - build.repository=$(params.repourl)
+        - --label
+        - build.author=$(params.username)
+        - --no-push
+      securityContext:
+        runAsUser: 0
+    - name: scan
+      image: aquasec/trivy:latest
+      resources:
+        requests:
+          cpu:  {{ .Values.requests.mediumResources.cpu }}
+          memory: {{ .Values.requests.mediumResources.memory }}
+        limits:
+          cpu: {{ .Values.limits.mediumResources.cpu }}
+          memory: {{ .Values.limits.mediumResources.memory }}
+      workingDir: $(workspaces.source.path)
+      script: |
+        #!/usr/bin/env sh
+        trivy image --input $(workspaces.source.path)/image.tar
+      securityContext:
+        runAsUser: 0

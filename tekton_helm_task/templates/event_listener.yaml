@@ -1,0 +1,29 @@
+apiVersion: triggers.tekton.dev/v1beta1
+kind: EventListener
+metadata:
+  name: {{ .Values.eventListenerName}}
+  namespace: {{ .Values.namespace }}
+spec:
+  serviceAccountName: {{ .Values.serviceAccountName }}
+  triggers:
+    - name: git-push-trigger
+      interceptors:
+        - ref:
+            name: {{ .Values.interceptorRepoName }}
+            kind: ClusterInterceptor
+            apiVersion: triggers.tekton.dev
+          params:
+            {{- range .Values.interceptorRepoParams }}
+            - name: {{ .name }}
+              value: {{ .value }}
+            {{- end }}
+        - ref:
+            name: cel
+            kind: ClusterInterceptor
+          params:
+            - name: filter
+              value: {{ .Values.interceptorCelValue }}
+      bindings:
+        - ref: william-tekton-clone-git-binding
+      template:
+        ref: william-tekton-pipeline-template
